@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        VERSION = "1.0.${BUILD_NUMBER}"  // Semantic-ish versioning
+        SONAR_PROJECT_KEY = 'my-fastapi-app'
     }
 
     stages {
@@ -12,22 +12,30 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('SonarQube Analysis') {
             steps {
-                script {
-                    sh """
-                        mkdir -p build
-                        echo "Build version: ${VERSION}" > build/VERSION.txt
-                        zip -r build/myapp-${VERSION}.zip * .[^.]* || true
-                    """
+                withSonarQubeEnv('SonarQubeLocal') {
+                    sh '''
+                    sonar-scanner \
+                      -Dsonar.projectKey=my-fastapi-app \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=http://localhost:9000
+                    '''
                 }
             }
         }
 
-        stage('Archive') {
+        stage('Quality Gate') {
             steps {
-                archiveArtifacts artifacts: 'build/*.zip', fingerprint: true
-                archiveArtifacts artifacts: 'build/VERSION.txt', fingerprint: true
+                timeout(time: 1, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'echo "Build passes quality gate ✅"'
             }
         }
     }

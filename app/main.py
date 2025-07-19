@@ -33,3 +33,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @app.get("/users/{user_id}", response_model=schemas.UserOut)
 def read_user(user_id: int, db: Session = Depends(get_db)):
     return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def unused_code():
+    pass
