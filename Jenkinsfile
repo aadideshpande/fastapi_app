@@ -1,29 +1,33 @@
 pipeline {
     agent any
 
+    environment {
+        VERSION = "1.0.${BUILD_NUMBER}"  // Semantic-ish versioning
+    }
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "Branch: ${env.BRANCH_NAME}"
             }
         }
 
-        stage('Build: Main Branch') {
-            when {
-                branch 'main'
-            }
+        stage('Build') {
             steps {
-                echo 'Running main branch build steps...'
+                script {
+                    sh """
+                        mkdir -p build
+                        echo "Build version: ${VERSION}" > build/VERSION.txt
+                        zip -r build/myapp-${VERSION}.zip * .[^.]* || true
+                    """
+                }
             }
         }
 
-        stage('Build: Feature Branches') {
-            when {
-                expression { return env.BRANCH_NAME.startsWith("feature/") }
-            }
+        stage('Archive') {
             steps {
-                echo "Running feature branch pipeline for ${env.BRANCH_NAME}"
+                archiveArtifacts artifacts: 'build/*.zip', fingerprint: true
+                archiveArtifacts artifacts: 'build/VERSION.txt', fingerprint: true
             }
         }
     }
